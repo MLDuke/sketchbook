@@ -1,0 +1,11 @@
+{
+  "name": "sketchbook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "new": "node scripts/new-entry.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
