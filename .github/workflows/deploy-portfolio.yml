@@ -8,6 +8,17 @@ jobs:
   deploy-hook:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Runs before the hook, so a bad published entry blocks the rebuild
+      # instead of failing inside portfolio-site's build.
+      - name: Validate entries
+        run: npm run validate
+
       - name: Call Vercel deploy hook
         run: |
           if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" ]; then

@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "new": "node scripts/new-entry.mjs"
+    "new": "node scripts/new-entry.mjs",
+    "validate": "node scripts/validate-entries.mjs"
   },
   "engines": {
     "node": ">=18"

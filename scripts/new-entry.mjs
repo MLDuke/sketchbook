@@ -63,10 +63,19 @@ async function main() {
   const frontmatterLines = [
     "---",
     `title: "${title.replace(/"/g, '\\"')}"`,
+    '# description: 1-2 sentences. Feeds the journal card and the page meta/OG',
+    "# tags, so write it for someone who hasn't opened the entry yet.",
+    'description: ""',
     `date: "${date}"`,
     `slug: "${slug}"`,
     `type: ${type}`,
     "publish: false",
+    "# media: one item per image/GIF. src is relative to this entry folder;",
+    "# alt is required once src is set. To fill it in, drop the [] below and",
+    "# uncomment the example under it:",
+    "media: []",
+    '#   - src: "scroll-snap.gif"',
+    '#     alt: "Scroll snap prototype moving between image panels"',
   ];
 
   if (needsSource) {
@@ -81,7 +90,7 @@ async function main() {
 
   console.log(`\nCreated ${entryDir}`);
   console.log("Next steps:");
-  console.log("  1. Drop media (images/GIFs) into the entry folder.");
+  console.log("  1. Drop media (images/GIFs) into the entry folder and update the media list.");
   if (needsSource) {
     console.log("  2. Drop the source file(s) into src/ and update sourcePath if needed.");
   }
