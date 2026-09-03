@@ -8,9 +8,11 @@ Raw lab notebook for design and code explorations — static images, GIFs, small
 entries/
   .gitkeep
   2026-08-31-scroll-snap-experiment/
-    index.md       # frontmatter + a short note
-    *.gif / *.png  # media, co-located with the entry
-    src/           # present for type: code | mixed — the actual sketch source
+    index.md         # frontmatter + a short note
+    *.gif / *.png    # media, co-located with the entry
+    src/             # present for type: code | mixed — the actual sketch source
+      index.tsx      # default-exports a React component (the playground entry point)
+playground/          # local Vite app that renders every entry — see "Playground"
 ```
 
 Entries are dated so the repo is browsable and sortable straight from GitHub's file view.
@@ -65,6 +67,64 @@ the rebuild rather than shipping a blank figure — or crashing `portfolio-site`
 build, which throws on media that has a `src` but no `alt`.
 
 Everything defaults to unpublished — most entries can just stay private-by-convention in this public repo. Publishing is a one-line, one-push action; nothing else needs to change in `portfolio-site` for it to show up (see `.github/workflows/deploy-portfolio.yml`, which needs a `VERCEL_DEPLOY_HOOK_URL` secret set once `portfolio-site` has one).
+
+## Playground
+
+`npm run dev` starts a local Vite app (`playground/`) that lists every entry in
+one place: `code` and `mixed` entries render live, `image` entries show their
+media. It's for previewing and iterating on a sketch — building elsewhere first
+(step 1 above) is still fine; nothing here depends on the playground.
+
+The entry contract for a live sketch is one file:
+
+```tsx
+// entries/<date>-<slug>/src/index.tsx
+export default function Sketch() {
+  return <div>…</div>;
+}
+```
+
+Shared deps (`react`, `motion`, `dialkit`) are hoisted at the repo root, so a
+sketch just imports them — no per-entry `package.json` or install. Each sketch is
+a lazy chunk: the dev server only compiles the one you open, and startup stays
+flat as the collection grows. Sketches can call `useDialKit` directly.
+
+If a sketch genuinely needs its own dependency, add a `package.json` in its
+folder and register it under `workspaces` in the root `package.json` — the
+playground picks it up the same way.
+
+### Dev overlays
+
+The `dialkit` dial panel and the `agentation` annotation toolbar are mounted once
+by the playground shell (`playground/src/devtools.tsx`). They're **on under
+`npm run dev`** and **stripped from `npm run build:playground`** — package and
+all — unless re-enabled per build:
+
+| env var | effect |
+| --- | --- |
+| `ENABLE_DIALKIT=true` | ship the dial panel in the build |
+| `ENABLE_AGENTATION=true` | ship the annotation toolbar in the build |
+
+Set them independently as Vercel project env vars, or inline for a local build
+(`ENABLE_AGENTATION=true npm run build:playground`). A gitignored repo-root
+`.env` is also read — see `.env.example`.
+
+Note: a sketch that imports `useDialKit` still bundles the dialkit *runtime* into
+its own chunk regardless of the toggle — the toggle only controls the panel UI.
+With the panel off, such a sketch just renders at its default dial values.
+
+### Sharing a sketch with your team
+
+`npm run build:playground` emits a static site to `playground/dist/` (gitignored).
+`vercel.json` points a Vercel project at it (`buildCommand`/`outputDirectory`
+preset), so pushing a branch gives a preview URL; link straight to one sketch
+with the hash route, e.g. `https://<deploy>/#/2026-08-31-scroll-snap-experiment`.
+
+This repo is public and most entries are unpublished drafts, and a plain deploy
+exposes all of them. For team-only sharing, put access control in front —
+Vercel Deployment Protection (password / Vercel Authentication) or Cloudflare
+Access. Deploying the playground does not touch `portfolio-site`; the two are
+independent.
 
 ## What this repo does not do
 

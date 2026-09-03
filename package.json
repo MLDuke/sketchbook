@@ -4,9 +4,26 @@
   "type": "module",
   "scripts": {
     "new": "node scripts/new-entry.mjs",
-    "validate": "node scripts/validate-entries.mjs"
+    "validate": "node scripts/validate-entries.mjs",
+    "dev": "vite playground",
+    "build:playground": "vite build playground",
+    "preview:playground": "vite preview playground"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "agentation": "^3.0.2",
+    "dialkit": "^1.4.3",
+    "motion": "^13.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
   }
 }
