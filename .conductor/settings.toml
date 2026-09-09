@@ -4,12 +4,17 @@
 setup = "npm install"
 run_mode = "concurrent"
 
-# The playground dev server. Vite binds $CONDUCTOR_PORT so each local workspace
-# gets a stable, non-colliding port; hidden in cloud workspaces where that var
-# is unset. This is the closest thing to "a server that's up while the workspace
-# is active" — press Run once; Conductor does not autostart it.
+# The playground dev server. playground/vite.config.ts derives both port and
+# strictPort from $CONDUCTOR_PORT — so each local workspace gets a stable,
+# non-colliding port, and neither flag is repeated here (passing --port on the
+# CLI would override the config's 5173 fallback and hard-fail wherever the var
+# is unset). Hidden in cloud workspaces, which don't set it. --host is the one
+# piece the config doesn't cover: it pins the bind address to IPv4, since Vite's
+# `localhost` default can resolve to ::1. This is the closest thing to "a server
+# that's up while the workspace is active" — press Run once; Conductor does not
+# autostart it.
 [scripts.run.dev]
-command = "npm run dev"
+command = "npm run dev -- --host 127.0.0.1"
 available_in = [ "local" ]
 default = true
 icon = "play"
