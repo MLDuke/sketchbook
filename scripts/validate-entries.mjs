@@ -3,6 +3,10 @@
 // stricter content checks only run on publish: true, since drafts are expected
 // to be incomplete.
 //
+// "Structural" means anything that is broken regardless of publish state — a
+// sketch the playground can't render, or a file heavy enough to bloat the repo.
+// Those fail on drafts too, because that is when they're cheap to fix.
+//
 // portfolio-site throws at build time on a media item that has a src but no
 // alt, so catching that here turns a confusing remote build failure into a
 // local one.
@@ -14,12 +18,45 @@ import { parseFrontmatter } from "./lib/frontmatter.mjs";
 const ENTRIES_DIR = "entries";
 const TYPES = ["image", "code", "mixed"];
 
+// The playground looks for exactly this file; see playground/src/sketches.ts.
+const SOURCE_ENTRY_RE = /^index\.(tsx|jsx|ts|js)$/;
+// `export default fn` or `export { x as default }` — both satisfy the contract.
+const DEFAULT_EXPORT_RE = /export\s+default\s|export\s*\{[^}]*\bas\s+default\b/;
+
+const MEDIA_RE = /\.(png|gif|jpg|jpeg|webp|avif|svg)$/i;
+const MEDIA_WARN_BYTES = 2 * 1024 * 1024;
+const MEDIA_ERROR_BYTES = 5 * 1024 * 1024;
+
+const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
 function isMeaningfulDir(dir) {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return false;
   return readdirSync(dir).some((f) => f !== ".gitkeep");
 }
 
-async function checkEntry(dirName, errors) {
+function sourceEntryPath(entryDir) {
+  const srcDir = path.join(entryDir, "src");
+  if (!existsSync(srcDir) || !statSync(srcDir).isDirectory()) return null;
+  const match = readdirSync(srcDir).find((f) => SOURCE_ENTRY_RE.test(f));
+  return match ? path.join(srcDir, match) : null;
+}
+
+// Repo bloat is a commit-time problem, not a publish-time one, so this walks
+// what's actually on disk rather than what frontmatter happens to list yet.
+function checkMediaWeight(entryDir, errors, warnings) {
+  for (const file of readdirSync(entryDir)) {
+    if (!MEDIA_RE.test(file)) continue;
+    const full = path.join(entryDir, file);
+    const { size } = statSync(full);
+    if (size > MEDIA_ERROR_BYTES) {
+      errors.push(`${full}: ${mb(size)} exceeds the ${mb(MEDIA_ERROR_BYTES)} limit — compress it or drop the frame rate`);
+    } else if (size > MEDIA_WARN_BYTES) {
+      warnings.push(`${full}: ${mb(size)} is heavy for a sketch — consider compressing`);
+    }
+  }
+}
+
+async function checkEntry(dirName, errors, warnings) {
   const entryDir = path.join(ENTRIES_DIR, dirName);
   const indexPath = path.join(entryDir, "index.md");
   const at = (msg) => errors.push(`${indexPath}: ${msg}`);
@@ -54,6 +91,19 @@ async function checkEntry(dirName, errors) {
     at("media must be a list");
   }
 
+  checkMediaWeight(entryDir, errors, warnings);
+
+  // The sketch contract, checked on drafts too: an index the playground can
+  // find but can't render is broken now, not at publish time. Its *absence* is
+  // fine until publish — `npm run new` scaffolds src/ before there's a sketch.
+  const sourceEntry = sourceEntryPath(entryDir);
+  if (sourceEntry) {
+    const source = await readFile(sourceEntry, "utf8");
+    if (!DEFAULT_EXPORT_RE.test(source)) {
+      errors.push(`${sourceEntry}: no default export — the playground renders \`export default\` and nothing else`);
+    }
+  }
+
   // Drafts are allowed to be incomplete — everything below is publish-only.
   if (data.publish !== true) return;
 
@@ -85,6 +135,9 @@ async function checkEntry(dirName, errors) {
   });
 
   if (data.type === "code" || data.type === "mixed") {
+    if (!sourceEntry) {
+      at(`published type "${data.type}" entry has no src/index.tsx to render`);
+    }
     if (!data.sourcePath) {
       at(`type "${data.type}" requires a sourcePath`);
     } else {
@@ -109,7 +162,14 @@ async function main() {
     .map((d) => d.name);
 
   const errors = [];
-  for (const dir of dirs) await checkEntry(dir, errors);
+  const warnings = [];
+  for (const dir of dirs) await checkEntry(dir, errors, warnings);
+
+  if (warnings.length > 0) {
+    console.warn(`${warnings.length} warning(s):\n`);
+    for (const w of warnings) console.warn(`  ${w}`);
+    console.warn("");
+  }
 
   if (errors.length > 0) {
     console.error(`Found ${errors.length} problem(s):\n`);

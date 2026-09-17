@@ -1,0 +1,30 @@
+name: CI
+
+# Catches a bad entry on the pull request. deploy-portfolio.yml runs `validate`
+# again on push to main — that stays as the last line of defence in front of
+# portfolio-site's rebuild, this is the one that runs before you merge.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Entry structure, the sketch contract, and media weight.
+      - name: Validate entries
+        run: npm run validate
+
+      # Covers playground/src and every entries/*/src, then vite.config.ts
+      # separately — see playground/tsconfig.json and tsconfig.node.json.
+      - name: Typecheck
+        run: npm run typecheck

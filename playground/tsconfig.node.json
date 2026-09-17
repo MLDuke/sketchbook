@@ -1,0 +1,12 @@
+{
+  // vite.config.ts only — the one file here that runs in Node rather than the
+  // browser. Kept as its own project so `@types/node` doesn't apply to
+  // playground/src and entries/*/src, where `setTimeout` must stay the DOM one
+  // and `process` genuinely isn't there at runtime.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts"]
+}

@@ -19,11 +19,24 @@ available_in = [ "local" ]
 default = true
 icon = "play"
 
-# `npm run validate` — the same publish-time gate CI runs before the deploy hook.
+# The two gates CI runs on every pull request (.github/workflows/ci.yml). Kept
+# as separate buttons because they fail for different reasons — a malformed
+# entry vs. a type error — and a combined command would hide the second behind
+# the first. Neither needs $CONDUCTOR_PORT, so both stay available in cloud
+# workspaces too.
+#
+# `npm run validate` also runs ahead of the deploy hook on push to main.
 [scripts.run.validate]
 command = "npm run validate"
 icon = "shield-check"
 
-# `npm run new` is deliberately omitted: it prompts for a title and type via
-# readline, and Conductor run scripts execute in a non-interactive shell. Run it
-# from a terminal instead.
+# Covers playground/src and every entries/*/src, then vite.config.ts separately
+# — see playground/tsconfig.json and tsconfig.node.json.
+[scripts.run.typecheck]
+command = "npm run typecheck"
+icon = "type"
+
+# `npm run new` is deliberately omitted, and still is now that it accepts
+# `--title` / `--type` and works in the non-interactive shell run scripts get: a
+# run script is a fixed command, so there's nowhere to supply the one thing that
+# differs per entry. Run it from a terminal, or pass the flags from an agent.
