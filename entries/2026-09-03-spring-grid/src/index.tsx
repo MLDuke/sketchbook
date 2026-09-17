@@ -8,6 +8,9 @@ function pseudoRandom(n: number): number {
   return x - Math.floor(x);
 }
 
+// Colors are literals rather than the playground's CSS variables: a sketch
+// stays self-contained so it survives being lifted out of this repo. They do
+// assume the dark stage the playground provides.
 export default function SpringGrid() {
   const p = useDialKit("Spring grid", {
     count: [36, 1, 100, 1],

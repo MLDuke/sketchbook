@@ -7,7 +7,8 @@
     "validate": "node scripts/validate-entries.mjs",
     "dev": "vite playground",
     "build:playground": "vite build playground",
-    "preview:playground": "vite preview playground"
+    "preview:playground": "vite preview playground",
+    "typecheck": "tsc -p playground/tsconfig.json && tsc -p playground/tsconfig.node.json"
   },
   "engines": {
     "node": ">=18"
@@ -20,6 +21,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@types/node": "^22.20.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
