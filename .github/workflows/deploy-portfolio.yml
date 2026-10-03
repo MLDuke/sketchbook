@@ -12,7 +12,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       # Runs before the hook, so a bad published entry blocks the rebuild
       # instead of failing inside portfolio-site's build.

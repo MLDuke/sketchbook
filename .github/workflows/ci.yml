@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - run: npm ci
@@ -24,7 +24,11 @@ jobs:
       - name: Validate entries
         run: npm run validate
 
-      # Covers playground/src and every entries/*/src, then vite.config.ts
-      # separately — see playground/tsconfig.json and tsconfig.node.json.
+      # Covers playground/src and every entries/*/src, then vite.config.ts and
+      # the *.test.ts files separately — see playground/tsconfig*.json.
       - name: Typecheck
         run: npm run typecheck
+
+      # node:test over scripts/**/*.test.mjs and entries/*/src/**/*.test.ts.
+      - name: Test
+        run: npm test

@@ -8,10 +8,11 @@
     "dev": "vite playground",
     "build:playground": "vite build playground",
     "preview:playground": "vite preview playground",
-    "typecheck": "tsc -p playground/tsconfig.json && tsc -p playground/tsconfig.node.json"
+    "test": "node --test \"scripts/**/*.test.mjs\" \"entries/*/src/**/*.test.ts\"",
+    "typecheck": "tsc -p playground/tsconfig.json && tsc -p playground/tsconfig.node.json && tsc -p playground/tsconfig.test.json"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.18"
   },
   "dependencies": {
     "agentation": "^3.0.2",

@@ -16,5 +16,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "../entries/*/src"]
+  "include": ["src", "../entries/*/src"],
+  // Tests run under node:test and need Node types; tsconfig.test.json covers them.
+  "exclude": ["**/*.test.ts", "../entries/*/src/**/*.test.ts"]
 }

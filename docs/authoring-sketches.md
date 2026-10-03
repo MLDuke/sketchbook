@@ -59,7 +59,7 @@ rather than derived from the first line of the note.
 **5. Check it.**
 
 ```sh
-npm run validate && npm run typecheck
+npm run validate && npm run typecheck && npm test
 ```
 
 **6. Leave it unpublished.** Everything defaults to `publish: false` and most
@@ -136,12 +136,21 @@ build time without it, so `validate` catches it here where the error makes sense
   disk with `alt` text, a `sourcePath` that isn't an empty directory, and an
   `src/index.*` that actually exists. Drafts are expected to be half-finished.
 
-`npm run typecheck` runs two projects: `playground/tsconfig.json`, which covers
+`npm run typecheck` runs three projects: `playground/tsconfig.json`, which covers
 `playground/src` **and** `../entries/*/src` — so sketches are typechecked under
-`strict`, same as the app — and `playground/tsconfig.node.json` for
-`vite.config.ts`. See *Machinery* for why they're split.
+`strict`, same as the app — `playground/tsconfig.node.json` for
+`vite.config.ts`, and `playground/tsconfig.test.json` for `*.test.ts` files. See
+*Machinery* for why they're split.
 
-Both run in `.github/workflows/ci.yml` on every pull request.
+`npm test` runs Node's built-in test runner (`node:test`, no extra dependency)
+over `scripts/**/*.test.mjs` and `entries/*/src/**/*.test.ts`. A sketch that has
+logic worth pinning — layout maths, say — puts it in a sibling module with no DOM
+in it and tests that, next to it in `src/`. Node runs the `.ts` files by
+stripping types, so they must use erasable-only syntax (no enums, namespaces or
+parameter properties) and import siblings with the `.ts` extension. This needs
+Node 22.18 or later, which is what `engines` and both workflows pin.
+
+All three run in `.github/workflows/ci.yml` on every pull request.
 `.github/workflows/deploy-portfolio.yml` runs `validate` again on push to `main`
 before firing the deploy hook, so a broken published entry blocks the rebuild
 instead of failing inside `portfolio-site`'s build.
@@ -192,12 +201,19 @@ it so each Conductor workspace gets a stable, non-colliding port, falling back t
 `--port` on the command line would override the fallback and break every
 non-Conductor checkout.
 
-**Two tsconfigs, and `@types/node` belongs to only one.** `tsconfig.json` is the
-browser project (`playground/src` plus every `entries/*/src`);
+**Three tsconfigs, and `@types/node` belongs to two of them.** `tsconfig.json` is
+the browser project (`playground/src` plus every `entries/*/src`);
 `tsconfig.node.json` extends it for the one file that runs in Node,
 `vite.config.ts`. Folding them back together means sketches compile with Node's
 globals: `setTimeout` starts returning `NodeJS.Timeout` instead of a number, and
 `process` typechecks in code where Vite leaves it undefined at runtime.
+
+`tsconfig.test.json` is the third: `*.test.ts` files import `node:test` and
+`node:assert`, so they need Node types, and `tsconfig.json` excludes them so they
+never reach the browser project. It also sets `erasableSyntaxOnly`, because
+Node's type stripping can't run enums or parameter properties. Whatever a test
+imports is typechecked there too, without DOM types — a quiet check that the
+module under test really is DOM-free.
 
 **`scripts/lib/frontmatter.mjs` — plain JS, no Node builtins.** One parser shared
 by the browser (playground), the validator and the scaffold. Its types live
