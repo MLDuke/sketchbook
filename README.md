@@ -44,7 +44,12 @@ sourcePath: "src/"  # only present for type: code | mixed
 Media `src` values are paths relative to the entry folder. Keep images and GIFs
 beside `index.md`; keep source files under `src/` and point `sourcePath` there.
 GIF for motion, PNG for stills, WebP where it wins — JPEG, AVIF and SVG also
-render. `npm run validate` warns over 2 MB per file and fails over 5 MB.
+render. Extensions must be lowercase (`.png`, not `.PNG`) — the playground only
+loads lowercase ones, so `npm run validate` fails on the others. It also warns
+over 2 MB per file and fails over 5 MB.
+
+An entry's folder must be named `<date>-<slug>`, matching its `date` and `slug`;
+`validate` fails otherwise, drafts included.
 
 New entries start with `media: []` — an empty list, not a blank stub, so an entry
 you haven't filled in yet contributes no media rather than one empty item.
@@ -71,8 +76,8 @@ No tags/categories for now — add them later if the collection grows enough to 
 at least one item for `image` and `mixed` types, each with an `alt` and a `src`
 that exists on disk — and a non-empty `sourcePath` for `code` and `mixed` types.
 Some checks apply to drafts too, because they're broken regardless of publish
-state: media weight, and the sketch contract — a `src/index.*` that exists must
-have a default export. `npm run typecheck` covers `playground/src` and every
+state: media weight and extensions, the folder name, and the sketch contract — a
+`src/index.*` that exists must have a default export. `npm run typecheck` covers `playground/src` and every
 `entries/*/src` under `strict`.
 
 Both run in CI on every pull request (`.github/workflows/ci.yml`), and `validate`

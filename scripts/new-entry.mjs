@@ -12,17 +12,16 @@ import path from "node:path";
 import { argv, stdin, stdout } from "node:process";
 import { parseArgs } from "node:util";
 import readline from "node:readline/promises";
+import {
+  ENTRY_TYPES as TYPES,
+  entryDirName,
+  isEntryType,
+  serializeFrontmatter,
+  slugify,
+  typeNeedsSource,
+} from "./lib/entry.mjs";
 
-const TYPES = ["image", "code", "mixed"];
 const USAGE = 'usage: npm run new -- --title "Entry title" --type image|code|mixed';
-
-function slugify(title) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -43,7 +42,7 @@ async function resolveInputs(flags) {
   let title = (flags.title ?? "").trim();
   let type = (flags.type ?? "").trim();
 
-  if (type && !TYPES.includes(type)) {
+  if (type && !isEntryType(type)) {
     throw new Error(`--type must be one of: ${TYPES.join(", ")}\n${USAGE}`);
   }
   if (title && type) return { title, type };
@@ -63,7 +62,7 @@ async function resolveInputs(flags) {
     }
     if (!type) {
       type = await prompt(rl, `Type (${TYPES.join("/")}): `, {
-        validate: (v) => TYPES.includes(v),
+        validate: isEntryType,
         hint: `Please enter one of: ${TYPES.join(", ")}`,
       });
     }
@@ -106,7 +105,7 @@ async function main() {
     return;
   }
 
-  const dirName = `${date}-${slug}`;
+  const dirName = entryDirName(date, slug);
   const entryDir = path.join("entries", dirName);
 
   if (existsSync(entryDir)) {
@@ -117,39 +116,25 @@ async function main() {
 
   await mkdir(entryDir, { recursive: true });
 
-  const needsSource = type === "code" || type === "mixed";
+  const needsSource = typeNeedsSource(type);
   if (needsSource) {
     await mkdir(path.join(entryDir, "src"), { recursive: true });
     await writeFile(path.join(entryDir, "src", ".gitkeep"), "");
   }
 
-  const frontmatterLines = [
-    "---",
-    `title: "${title.replace(/"/g, '\\"')}"`,
-    '# description: 1-2 sentences. Feeds the journal card and the page meta/OG',
-    "# tags, so write it for someone who hasn't opened the entry yet.",
-    'description: ""',
-    `date: "${date}"`,
-    `slug: "${slug}"`,
-    `type: ${type}`,
-    "publish: false",
-    "# media: one item per image/GIF. src is relative to this entry folder;",
-    "# alt is required once src is set. To fill it in, drop the [] below and",
-    "# uncomment the example under it:",
-    "media: []",
-    '#   - src: "scroll-snap.gif"',
-    '#     alt: "Scroll snap prototype moving between image panels"',
-  ];
+  const frontmatter = serializeFrontmatter({
+    title,
+    date,
+    slug,
+    type,
+    // The scaffold's sourcePath points at the src/ folder it just created.
+    sourcePath: needsSource ? "src/" : undefined,
+  });
 
-  if (needsSource) {
-    frontmatterLines.push(
-      'sourcePath: "src/"  # path to the source file(s), relative to this entry folder'
-    );
-  }
-
-  frontmatterLines.push("---", "", "Write a short note about this exploration here.", "");
-
-  await writeFile(path.join(entryDir, "index.md"), frontmatterLines.join("\n"));
+  await writeFile(
+    path.join(entryDir, "index.md"),
+    `${frontmatter}\nWrite a short note about this exploration here.\n`,
+  );
 
   console.log(`\nCreated ${entryDir}`);
   console.log("Next steps:");

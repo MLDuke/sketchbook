@@ -126,15 +126,24 @@ build time without it, so `validate` catches it here where the error makes sense
 
 ## What gets checked, and where
 
-`scripts/validate-entries.mjs` splits its checks in two:
+The rules themselves live in `scripts/lib/entry.mjs` (see *Machinery*);
+`scripts/validate-entries.mjs` only hands it each folder and prints what comes
+back. They split into two tiers:
 
 - **Structural — every entry, drafts included.** Required frontmatter fields,
-  `type` enum, `YYYY-MM-DD` date, boolean `publish`, media weight, and the
-  sketch contract: if `src/index.*` exists it must contain a default export.
-  These fail on drafts because they're broken *now* and cheap to fix now.
+  `type` enum, `YYYY-MM-DD` date, boolean `publish`, the folder name equalling
+  `<date>-<slug>`, media weight and lowercase media extensions, and the sketch
+  contract: if `src/index.*` exists it must contain a default export (one that
+  only appears in a comment or a string doesn't count). These fail on drafts
+  because they're broken *now* and cheap to fix now.
 - **Content — `publish: true` only.** A real `description`, media that exists on
   disk with `alt` text, a `sourcePath` that isn't an empty directory, and an
   `src/index.*` that actually exists. Drafts are expected to be half-finished.
+
+Each problem is an error or a warning, and only errors fail the run. The one
+warning is media over 2 MB. The playground runs the same module over every
+entry, so a broken entry still renders there but carries its problems on its
+index card and its page, minus the checks that need file sizes, source text or a complete file listing.
 
 `npm run typecheck` runs three projects: `playground/tsconfig.json`, which covers
 `playground/src` **and** `../entries/*/src` — so sketches are typechecked under
@@ -215,11 +224,25 @@ Node's type stripping can't run enums or parameter properties. Whatever a test
 imports is typechecked there too, without DOM types — a quiet check that the
 module under test really is DOM-free.
 
-**`scripts/lib/frontmatter.mjs` — plain JS, no Node builtins.** One parser shared
-by the browser (playground), the validator and the scaffold. Its types live
-beside it in `frontmatter.d.mts`; keep them in sync. It handles flat scalars and
-the single list-of-objects the schema needs — if the schema outgrows that, reach
-for a real YAML parser rather than extending the regexes.
+**`scripts/lib/entry.mjs` — the Entry module, plain JS, no Node builtins.** The
+one place that knows what an entry is: the `type` enum, required fields, date
+format, folder-name rule, media extensions and weight limits, the
+`src/index.*` rule, the two check tiers, and the frontmatter parser and writer.
+It takes pure data (folder name, `index.md` text, a listing of the entry's files
+with sizes, optionally the source text) and returns the parsed entry plus a list
+of problems, so it has to run unchanged in the browser and in Node, which is why
+it can't touch `fs` or `path`. Its types live beside it in `entry.d.mts`; keep
+them in sync. Callers import only this file. There are two adapters, and neither
+holds schema knowledge: `scripts/validate-entries.mjs` walks `entries/` and
+prints problems, and `playground/src/sketches.ts` builds the same inputs from its
+three globs (a partial listing with no sizes, which it declares via `partial`).
+`scripts/new-entry.mjs` is a third caller, using the writer for the scaffold.
+The frontmatter parser inside is hand-rolled on purpose: it handles flat scalars
+and the single list-of-objects the schema needs, so if the schema outgrows that,
+reach for a real YAML parser rather than extending the regexes.
+`scripts/lib/entry.test.mjs` (`node --test`) covers it, and also checks that the
+extension lists in `entry.mjs` agree with the literal globs in `sketches.ts`,
+since Vite can't take those from a variable.
 
 **`scripts/new-entry.mjs` — both input paths matter.** Prompts from a TTY, flags
 otherwise, and a clear error rather than a hung readline when a non-interactive
