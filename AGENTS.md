@@ -19,8 +19,8 @@ either here — link to them.
 - **Never hand-create an entry folder.** Run `npm run new` (see below) — drift
   in entry structure is exactly what it exists to prevent.
 - **Never install a dependency on your own.** See *Dependencies*.
-- **Run `npm run validate && npm run typecheck` before you commit.** Both run in
-  CI on the pull request; there is no reason to find out there.
+- **Run `npm run validate && npm run typecheck && npm test` before you commit.**
+  All three run in CI on the pull request; there is no reason to find out there.
 
 ## Commands
 
@@ -29,6 +29,7 @@ either here — link to them.
 | `npm run new -- --title "T" --type image\|code\|mixed` | scaffold an entry (works non-interactively) |
 | `npm run validate` | entry structure, sketch contract, media weight |
 | `npm run typecheck` | `playground/src` **and** every `entries/*/src` |
+| `npm test` | `node:test` over `scripts/**/*.test.mjs` and `entries/*/src/**/*.test.ts` |
 | `npm run dev` | playground at `localhost:5173` |
 | `npm run build:playground` | static build to `playground/dist/` |
 
@@ -38,7 +39,7 @@ either here — link to them.
 2. For `code`/`mixed`: write `src/index.tsx`. For `image`: drop media beside
    `index.md` and list it under `media:`.
 3. Fill in `title`, `description` and the note body in `index.md`.
-4. `npm run validate && npm run typecheck`.
+4. `npm run validate && npm run typecheck && npm test`.
 5. Leave `publish: false`. Stop and hand it back.
 
 ## The sketch contract

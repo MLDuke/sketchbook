@@ -1,0 +1,14 @@
+{
+  // *.test.ts files only — they import node:test and node:assert, so they need
+  // `@types/node`, which the browser project must not see (see tsconfig.node.json).
+  // Node runs them via built-in type stripping, so erasableSyntaxOnly rejects
+  // what it can't strip (enums, namespaces, parameter properties).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "erasableSyntaxOnly": true
+  },
+  "include": ["../entries/*/src/**/*.test.ts"],
+  "exclude": []
+}
