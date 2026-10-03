@@ -3,9 +3,11 @@
 Raw lab notebook for design and code explorations — static images, GIFs, small UI code snippets. This repo is the source of truth for everything; [portfolio-site](https://github.com/MLDuke/portfolio-site)'s `/journal` section pulls in only the entries marked `publish: true`.
 
 Adding an entry: [`docs/authoring-sketches.md`](docs/authoring-sketches.md) is
-the full guide — conventions, dependency policy, and the invariants behind
-`playground/` and `scripts/`. [`AGENTS.md`](AGENTS.md) is the same rules
-compressed for coding agents. This file stays the overview and owns the schema.
+the full guide — conventions, dependency policy, and an index of the invariants
+behind `playground/` and `scripts/`. [`AGENTS.md`](AGENTS.md) is the same rules
+compressed for coding agents. [`CONTEXT.md`](CONTEXT.md) defines the terms used
+here, and [`docs/adr/`](docs/adr/README.md) records why the machinery is the way
+it is. This file stays the overview and owns the schema.
 
 ## Structure
 
@@ -18,7 +20,10 @@ entries/
     src/             # present for type: code | mixed — the actual sketch source
       index.tsx      # default-exports a React component (the playground entry point)
 playground/          # local Vite app that renders every entry — see "Playground"
-docs/                # authoring guide
+docs/
+  authoring-sketches.md  # authoring guide
+  adr/                   # architecture decision records, one per file
+CONTEXT.md           # glossary of the terms used across the repo
 ```
 
 Entries are dated so the repo is browsable and sortable straight from GitHub's file view.
