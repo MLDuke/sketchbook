@@ -72,6 +72,12 @@ export default function Sketch() {
 Beyond that, **ask before installing**: adding to root deps changes every future
 sketch's baseline, and a one-off belongs in a per-entry workspace instead.
 
+## Issue tracker
+
+Issues live in Linear (team `Mduke`, label `sketchbook`), not GitHub Issues —
+use the Linear MCP tools. See
+[`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+
 ## Machinery — read before touching
 
 `playground/`, `scripts/`, `vercel.json` and `.github/workflows/` carry
