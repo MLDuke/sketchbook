@@ -1,40 +1,38 @@
 import type { ComponentType } from "react";
-import { parseFrontmatter } from "../../scripts/lib/frontmatter.mjs";
+import {
+  readEntry,
+  type Entry,
+  type EntryFile,
+  type EntryMedia,
+  type Problem,
+} from "../../scripts/lib/entry.mjs";
 
-export type SketchType = "image" | "code" | "mixed";
-
-export interface SketchMedia {
-  src: string;
-  alt?: string;
-  caption?: string;
+export interface SketchMedia extends EntryMedia {
   /** Resolved bundler URL, present only when the file exists on disk. */
   url?: string;
 }
 
-export interface Sketch {
-  /** Folder name, e.g. "2026-09-03-spring-grid" — also the hash route. */
-  dir: string;
-  slug: string;
-  title: string;
-  description: string;
-  date: string;
-  type: SketchType;
-  publish: boolean;
-  /** Markdown body of index.md, after the frontmatter block. */
-  note: string;
+/**
+ * An Entry as the Entry module read it (nothing defaulted: an invalid entry has
+ * empty fields and `problems` says why), plus what the playground adds.
+ */
+export interface Sketch extends Omit<Entry, "media"> {
   media: SketchMedia[];
-  /** Frontmatter parse warnings, surfaced in the UI as-is. */
-  problems: string[];
+  /** Everything wrong with the entry, as judged by the Entry module. */
+  problems: Problem[];
   /**
-   * Dynamic import of the sketch's `src/index.{jsx,tsx}`, or undefined when the
-   * entry has no runnable source yet. Each one is a separate lazy chunk, so a
-   * sketch is only fetched and compiled when you open it.
+   * Dynamic import of the sketch's `src/index.*`, or undefined when the entry
+   * has no runnable source yet. Each one is a separate lazy chunk, so a sketch
+   * is only fetched and compiled when you open it.
    */
   load?: () => Promise<{ default: ComponentType }>;
 }
 
 // Notes and media are cheap and needed up front for the index, so eager. Sketch
 // modules stay lazy — that is what keeps startup flat as the collection grows.
+// Keep all three globs literal (Vite analyses them statically), and in agreement
+// with MEDIA_EXTENSIONS / SOURCE_EXTENSIONS in entry.mjs; entry.test.mjs fails
+// if they drift.
 const noteFiles = import.meta.glob("../../entries/*/index.md", {
   query: "?raw",
   import: "default",
@@ -50,56 +48,45 @@ const sketchModules = import.meta.glob(
   "../../entries/*/src/index.{jsx,tsx,js,ts}",
 ) as Record<string, () => Promise<{ default: ComponentType }>>;
 
-const DIR_RE = /\/entries\/([^/]+)\//;
+const DIR_RE = /\/entries\/([^/]+)\/(.+)$/;
 
-function dirOf(globPath: string): string {
-  return globPath.match(DIR_RE)?.[1] ?? "";
+// The browser can't list a folder or stat a file, so each entry's file listing
+// is rebuilt from what the globs matched. That's a partial listing without
+// sizes, which the Entry module is told about (`partial`), so it skips the
+// checks that need either.
+function filesByDir(...globs: Record<string, unknown>[]): Map<string, EntryFile[]> {
+  const byDir = new Map<string, EntryFile[]>();
+  for (const key of globs.flatMap(Object.keys)) {
+    const match = key.match(DIR_RE);
+    if (!match) continue;
+    const [, dir, path] = match;
+    if (!byDir.has(dir)) byDir.set(dir, []);
+    byDir.get(dir)!.push({ path });
+  }
+  return byDir;
 }
 
-function bodyOf(md: string): string {
-  const lines = md.split("\n");
-  if (lines[0]?.trim() !== "---") return md.trim();
-  const end = lines.findIndex((l, i) => i > 0 && l.trim() === "---");
-  return end === -1 ? "" : lines.slice(end + 1).join("\n").trim();
-}
-
-function str(v: unknown, fallback = ""): string {
-  return typeof v === "string" ? v : fallback;
-}
+const files = filesByDir(noteFiles, mediaFiles, sketchModules);
 
 export const sketches: Sketch[] = Object.entries(noteFiles)
-  .map(([globPath, raw]): Sketch => {
-    const dir = dirOf(globPath);
+  .map(([globPath, indexMd]): Sketch => {
+    const dir = globPath.match(DIR_RE)![1];
     const prefix = `../../entries/${dir}/`;
-    const parsed = parseFrontmatter(raw);
-    const data = parsed?.data ?? {};
-
-    const rawMedia = Array.isArray(data.media) ? (data.media as SketchMedia[]) : [];
-    const media = rawMedia.map((m) => ({
-      ...m,
-      url: m?.src ? mediaFiles[prefix + m.src] : undefined,
-    }));
-
-    const modKey = Object.keys(sketchModules).find((k) =>
-      k.startsWith(`${prefix}src/index.`),
-    );
-
-    const type = (["image", "code", "mixed"] as const).includes(data.type as SketchType)
-      ? (data.type as SketchType)
-      : "image";
+    const { entry, problems } = readEntry({
+      dir,
+      indexMd,
+      files: files.get(dir) ?? [],
+      partial: true,
+    });
 
     return {
-      dir,
-      slug: str(data.slug, dir),
-      title: str(data.title, dir),
-      description: str(data.description),
-      date: str(data.date, dir.slice(0, 10)),
-      type,
-      publish: data.publish === true,
-      note: bodyOf(raw),
-      media,
-      problems: parsed?.problems ?? [],
-      load: modKey ? sketchModules[modKey] : undefined,
+      ...entry,
+      media: entry.media.map((m) => ({
+        ...m,
+        url: m.src ? mediaFiles[prefix + m.src] : undefined,
+      })),
+      problems,
+      load: entry.sourceFile ? sketchModules[prefix + entry.sourceFile] : undefined,
     };
   })
   .sort((a, b) => b.date.localeCompare(a.date) || a.dir.localeCompare(b.dir));

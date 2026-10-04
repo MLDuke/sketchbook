@@ -6,7 +6,7 @@ a local Vite app (`playground/`) renders them all.
 Rules first, then the path. Rationale lives in
 [`docs/authoring-sketches.md`](docs/authoring-sketches.md); the frontmatter
 schema lives in [`README.md`](README.md#frontmatter-schema). Don't restate
-either here — link to them.
+either here — link to them. Domain terms: [`CONTEXT.md`](CONTEXT.md).
 
 ## Hard rules
 
@@ -82,6 +82,7 @@ use the Linear MCP tools. See
 
 `playground/`, `scripts/`, `vercel.json` and `.github/workflows/` carry
 invariants that aren't obvious from the code, and unwinding one breaks the whole
-collection rather than a single sketch. Read
-[`docs/authoring-sketches.md#machinery`](docs/authoring-sketches.md#machinery)
-before editing any of them.
+collection rather than a single sketch. Each is a decision record in
+[`docs/adr/`](docs/adr/README.md); read the one for what you're touching, found
+via the Machinery index in
+[`docs/authoring-sketches.md#machinery`](docs/authoring-sketches.md#machinery).

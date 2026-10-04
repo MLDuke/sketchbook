@@ -3,9 +3,11 @@
 Raw lab notebook for design and code explorations — static images, GIFs, small UI code snippets. This repo is the source of truth for everything; [portfolio-site](https://github.com/MLDuke/portfolio-site)'s `/journal` section pulls in only the entries marked `publish: true`.
 
 Adding an entry: [`docs/authoring-sketches.md`](docs/authoring-sketches.md) is
-the full guide — conventions, dependency policy, and the invariants behind
-`playground/` and `scripts/`. [`AGENTS.md`](AGENTS.md) is the same rules
-compressed for coding agents. This file stays the overview and owns the schema.
+the full guide — conventions, dependency policy, and an index of the invariants
+behind `playground/` and `scripts/`. [`AGENTS.md`](AGENTS.md) is the same rules
+compressed for coding agents. [`CONTEXT.md`](CONTEXT.md) defines the terms used
+here, and [`docs/adr/`](docs/adr/README.md) records why the machinery is the way
+it is. This file stays the overview and owns the schema.
 
 ## Structure
 
@@ -18,7 +20,10 @@ entries/
     src/             # present for type: code | mixed — the actual sketch source
       index.tsx      # default-exports a React component (the playground entry point)
 playground/          # local Vite app that renders every entry — see "Playground"
-docs/                # authoring guide
+docs/
+  authoring-sketches.md  # authoring guide
+  adr/                   # architecture decision records, one per file
+CONTEXT.md           # glossary of the terms used across the repo
 ```
 
 Entries are dated so the repo is browsable and sortable straight from GitHub's file view.
@@ -44,7 +49,12 @@ sourcePath: "src/"  # only present for type: code | mixed
 Media `src` values are paths relative to the entry folder. Keep images and GIFs
 beside `index.md`; keep source files under `src/` and point `sourcePath` there.
 GIF for motion, PNG for stills, WebP where it wins — JPEG, AVIF and SVG also
-render. `npm run validate` warns over 2 MB per file and fails over 5 MB.
+render. Extensions must be lowercase (`.png`, not `.PNG`) — the playground only
+loads lowercase ones, so `npm run validate` fails on the others. It also warns
+over 2 MB per file and fails over 5 MB.
+
+An entry's folder must be named `<date>-<slug>`, matching its `date` and `slug`;
+`validate` fails otherwise, drafts included.
 
 New entries start with `media: []` — an empty list, not a blank stub, so an entry
 you haven't filled in yet contributes no media rather than one empty item.
@@ -71,8 +81,8 @@ No tags/categories for now — add them later if the collection grows enough to 
 at least one item for `image` and `mixed` types, each with an `alt` and a `src`
 that exists on disk — and a non-empty `sourcePath` for `code` and `mixed` types.
 Some checks apply to drafts too, because they're broken regardless of publish
-state: media weight, and the sketch contract — a `src/index.*` that exists must
-have a default export. `npm run typecheck` covers `playground/src` and every
+state: media weight and extensions, the folder name, and the sketch contract — a
+`src/index.*` that exists must have a default export. `npm run typecheck` covers `playground/src` and every
 `entries/*/src` under `strict`.
 
 Both run in CI on every pull request (`.github/workflows/ci.yml`), and `validate`

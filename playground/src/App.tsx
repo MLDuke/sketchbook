@@ -7,6 +7,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { typeNeedsSource, type Problem } from "../../scripts/lib/entry.mjs";
 import { sketches, type Sketch } from "./sketches";
 import { DevOverlays } from "./devtools";
 
@@ -21,6 +22,18 @@ function lazyFor(sketch: Sketch): ComponentType | null {
     lazyCache.set(sketch.dir, C);
   }
   return C;
+}
+
+// An invalid entry can be missing its title, date or type. Label it with what
+// is there rather than a blank link; its problems are shown alongside.
+const titleOf = (s: Sketch) => s.title || s.dir;
+const metaOf = (s: Sketch, extra: string[] = []) =>
+  [s.date, s.type, ...extra].filter(Boolean).join(" · ");
+
+function problemSummary(problems: Problem[]): string {
+  return problems
+    .map((p) => `${p.level}: ${p.file === "index.md" ? "" : `${p.file}: `}${p.message}`)
+    .join("\n");
 }
 
 function useHashRoute(): string {
@@ -64,19 +77,16 @@ function Stage({ sketch }: { sketch: Sketch }) {
   return (
     <article className="stage">
       <header className="stage__head">
-        <h1>{sketch.title}</h1>
-        <p className="stage__meta">
-          {sketch.date} · {sketch.type}
-          {sketch.publish ? " · published" : ""}
-        </p>
+        <h1>{titleOf(sketch)}</h1>
+        <p className="stage__meta">{metaOf(sketch, sketch.publish ? ["published"] : [])}</p>
         {sketch.description && <p className="stage__desc">{sketch.description}</p>}
       </header>
 
       {sketch.problems.length > 0 && (
         <pre className="panel panel--warn">
-          frontmatter warnings:
+          This entry has problems:
           {"\n"}
-          {sketch.problems.join("\n")}
+          {problemSummary(sketch.problems)}
         </pre>
       )}
 
@@ -103,7 +113,7 @@ function Stage({ sketch }: { sketch: Sketch }) {
         </div>
       ) : (
         <p className="panel">
-          {sketch.type === "code" || sketch.type === "mixed" ? (
+          {typeNeedsSource(sketch.type) ? (
             <>
               No <code>src/index.tsx</code> yet — add one that{" "}
               <code>export default</code>s a React component.
@@ -137,10 +147,15 @@ function Index() {
             <li key={s.dir}>
               <a href={`#/${s.dir}`}>
                 <div className="index__thumb" data-type={s.type}>
-                  {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{s.type}</span>}
+                  {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span>{s.type ?? "?"}</span>}
                 </div>
-                <span className="index__title">{s.title}</span>
+                <span className="index__title">{titleOf(s)}</span>
                 <span className="index__meta">{s.date}</span>
+                {s.problems.length > 0 && (
+                  <span className="index__warn" title={problemSummary(s.problems)}>
+                    {s.problems.length} {s.problems.length === 1 ? "problem" : "problems"}
+                  </span>
+                )}
               </a>
             </li>
           );
@@ -172,10 +187,8 @@ export function App() {
                 href={`#/${s.dir}`}
                 className={s.dir === route ? "is-active" : undefined}
               >
-                <span className="sidebar__title">{s.title}</span>
-                <span className="sidebar__meta">
-                  {s.date} · {s.type}
-                </span>
+                <span className="sidebar__title">{titleOf(s)}</span>
+                <span className="sidebar__meta">{metaOf(s)}</span>
               </a>
             </li>
           ))}

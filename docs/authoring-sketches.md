@@ -1,17 +1,18 @@
 # Authoring sketches
 
-The long-form guide to adding an entry to this repo and to the machinery that
-renders it. Three documents, and each fact lives in exactly one of them:
+The long-form guide to adding an entry to this repo, and an index to the
+machinery that renders it. Each fact lives in exactly one of these documents:
 
-- [`README.md`](../README.md) — what the repo is, the **frontmatter schema**, and
-  the publish pipeline into `portfolio-site`.
-- [`AGENTS.md`](../AGENTS.md) — the same rules as here, compressed to imperatives,
-  for coding agents.
-- **This file** — the walkthrough, the reasoning behind each convention, and the
-  invariants in `playground/` and `scripts/`.
+| Doc | Owns | Changes when |
+| --- | --- | --- |
+| [`README.md`](../README.md) | What the repo is, the **frontmatter schema**, and the publish pipeline into `portfolio-site` | The schema or the pipeline changes |
+| [`AGENTS.md`](../AGENTS.md) | The rules in this guide, compressed to imperatives for coding agents | A rule agents must follow changes |
+| **This guide** | The walkthrough, house style, and the index of machinery | A process or convention changes |
+| [`CONTEXT.md`](../CONTEXT.md) | **Vocabulary**: what each domain term means | A term is introduced, renamed or redefined |
+| [`docs/adr/`](adr/README.md) | **Decisions**: why the machinery is the way it is, one record per file | A decision is made, or an earlier one is replaced |
 
-If something here contradicts README, README wins on schema and this file wins
-on process.
+If two disagree, README wins on schema, this file wins on process, the ADRs win on
+*why*, and `CONTEXT.md` wins on what a term means.
 
 ## Anatomy of an entry
 
@@ -84,7 +85,9 @@ every sketch a dark panel background, 32px of padding, a border and
 
 **One file.** `playground/src/sketches.ts` only globs `src/index.{jsx,tsx,js,ts}`,
 but that file can import siblings in the same `src/` normally. Split when the
-sketch genuinely hurts to read, not before — these are notebook pages.
+sketch genuinely hurts to read, not before — these are notebook pages. Moving
+helpers *out* of the entry is a different matter: see
+[ADR 0014](adr/0014-sketch-internals-stay-in-entry.md).
 
 **Dial panel labels match the entry title.** `useDialKit("Spring grid", …)` in an
 entry titled *Spring grid*. With several sketches open, the label is the only
@@ -126,29 +129,38 @@ build time without it, so `validate` catches it here where the error makes sense
 
 ## What gets checked, and where
 
-`scripts/validate-entries.mjs` splits its checks in two:
+The rules themselves live in `scripts/lib/entry.mjs`
+([ADR 0010](adr/0010-entry-module.md));
+`scripts/validate-entries.mjs` only hands it each folder and prints what comes
+back. They split into two tiers:
 
 - **Structural — every entry, drafts included.** Required frontmatter fields,
-  `type` enum, `YYYY-MM-DD` date, boolean `publish`, media weight, and the
-  sketch contract: if `src/index.*` exists it must contain a default export.
-  These fail on drafts because they're broken *now* and cheap to fix now.
+  `type` enum, `YYYY-MM-DD` date, boolean `publish`, the folder name equalling
+  `<date>-<slug>`, media weight and lowercase media extensions, and the sketch
+  contract: if `src/index.*` exists it must contain a default export (one that
+  only appears in a comment or a string doesn't count). These fail on drafts
+  because they're broken *now* and cheap to fix now.
 - **Content — `publish: true` only.** A real `description`, media that exists on
   disk with `alt` text, a `sourcePath` that isn't an empty directory, and an
   `src/index.*` that actually exists. Drafts are expected to be half-finished.
 
+Each problem is an error or a warning, and only errors fail the run. The one
+warning is media over 2 MB. The playground runs the same module over every
+entry, so a broken entry still renders there but carries its problems on its
+index card and its page, minus the checks that need file sizes, source text or a complete file listing.
+
 `npm run typecheck` runs three projects: `playground/tsconfig.json`, which covers
 `playground/src` **and** `../entries/*/src` — so sketches are typechecked under
 `strict`, same as the app — `playground/tsconfig.node.json` for
-`vite.config.ts`, and `playground/tsconfig.test.json` for `*.test.ts` files. See
-*Machinery* for why they're split.
+`vite.config.ts`, and `playground/tsconfig.test.json` for `*.test.ts` files. Why
+they're split is in [ADR 0007](adr/0007-separate-tsconfigs.md).
 
-`npm test` runs Node's built-in test runner (`node:test`, no extra dependency)
-over `scripts/**/*.test.mjs` and `entries/*/src/**/*.test.ts`. A sketch that has
-logic worth pinning — layout maths, say — puts it in a sibling module with no DOM
-in it and tests that, next to it in `src/`. Node runs the `.ts` files by
-stripping types, so they must use erasable-only syntax (no enums, namespaces or
-parameter properties) and import siblings with the `.ts` extension. This needs
-Node 22.18 or later, which is what `engines` and both workflows pin.
+`npm test` runs Node's built-in test runner (`node:test`, no extra dependency;
+[ADR 0009](adr/0009-node-test-over-vitest.md) has the reasoning and the Node
+version it needs) over `scripts/**/*.test.mjs` and `entries/*/src/**/*.test.ts`.
+A sketch that has logic worth pinning — layout maths, say — puts it in a sibling
+module with no DOM in it and tests that, next to it in `src/`. Test sources must
+be erasable-only TypeScript and import siblings with the `.ts` extension.
 
 All three run in `.github/workflows/ci.yml` on every pull request.
 `.github/workflows/deploy-portfolio.yml` runs `validate` again on push to `main`
@@ -161,9 +173,8 @@ Flipping `publish: true` and pushing to `main` is the whole publish action: CI
 validates, the deploy hook fires, `portfolio-site` rebuilds and pulls the entry
 into `/journal`. Nothing else has to change in either repo.
 
-That makes it the one irreversible-ish action here, and the reason `AGENTS.md`
-forbids an agent doing it unprompted — it's a one-line frontmatter edit that
-could plausibly be made while tidying something else.
+Why it's a flag on `main`, and why an agent never flips it, is in
+[ADR 0001](adr/0001-publish-flag-on-main.md).
 
 Sharing an *unpublished* sketch is a different thing: `npm run build:playground`
 plus a Vercel preview gives you a URL, and you link to one sketch with the hash
@@ -173,59 +184,31 @@ so put Vercel Deployment Protection or Cloudflare Access in front of it first.
 ## Machinery
 
 Load-bearing details in `playground/`, `scripts/` and the workflows. Each looks
-removable and isn't.
+removable and isn't. One line per decision record saying what to leave alone; the
+reasoning, and what breaks otherwise, is in the ADR, so read it before changing
+the thing.
 
-**`playground/src/sketches.ts` — three globs, deliberately different.** Notes and
-media are `eager: true` because the index needs every title and thumbnail up
-front. Sketch modules are lazy, one chunk each, which is what keeps dev-server
-startup flat as the collection grows. Making them eager would compile every
-sketch on every start.
-
-**`playground/vite.config.ts` — `server.fs.allow: [repoRoot]`.** The playground's
-Vite root is `playground/`, but it reads `../entries` and `../scripts`. Remove
-this and every sketch 403s in dev.
-
-**`vite.config.ts` — `define` folds to literal booleans.** `__DIALKIT_ENABLED__`
-and `__AGENTATION_ENABLED__` become `true`/`false` at build time so the ternaries
-in `src/devtools.tsx` dead-code-eliminate, dropping the disabled overlay's
-wrapper *and its package* from the bundle. Replacing them with runtime env reads
-ships both packages to every viewer. Overlays are on under `npm run dev` and off
-in builds unless `ENABLE_DIALKIT` / `ENABLE_AGENTATION` is set — see
-[`.env.example`](../.env.example). A sketch importing `useDialKit` still bundles
-the dialkit *runtime* either way; the toggle only controls the panel UI.
-
-**`vite.config.ts` — `CONDUCTOR_PORT`.** Port and `strictPort` both derive from
-it so each Conductor workspace gets a stable, non-colliding port, falling back to
-5173 elsewhere. `.conductor/settings.toml` therefore passes only `--host
-127.0.0.1` (pinning IPv4, since Vite's `localhost` can resolve to `::1`) — adding
-`--port` on the command line would override the fallback and break every
-non-Conductor checkout.
-
-**Three tsconfigs, and `@types/node` belongs to two of them.** `tsconfig.json` is
-the browser project (`playground/src` plus every `entries/*/src`);
-`tsconfig.node.json` extends it for the one file that runs in Node,
-`vite.config.ts`. Folding them back together means sketches compile with Node's
-globals: `setTimeout` starts returning `NodeJS.Timeout` instead of a number, and
-`process` typechecks in code where Vite leaves it undefined at runtime.
-
-`tsconfig.test.json` is the third: `*.test.ts` files import `node:test` and
-`node:assert`, so they need Node types, and `tsconfig.json` excludes them so they
-never reach the browser project. It also sets `erasableSyntaxOnly`, because
-Node's type stripping can't run enums or parameter properties. Whatever a test
-imports is typechecked there too, without DOM types — a quiet check that the
-module under test really is DOM-free.
-
-**`scripts/lib/frontmatter.mjs` — plain JS, no Node builtins.** One parser shared
-by the browser (playground), the validator and the scaffold. Its types live
-beside it in `frontmatter.d.mts`; keep them in sync. It handles flat scalars and
-the single list-of-objects the schema needs — if the schema outgrows that, reach
-for a real YAML parser rather than extending the regexes.
-
-**`scripts/new-entry.mjs` — both input paths matter.** Prompts from a TTY, flags
-otherwise, and a clear error rather than a hung readline when a non-interactive
-shell is missing one. `npm run new` stays out of `.conductor/settings.toml` for
-that reason: Conductor run scripts are fixed commands with nowhere to type a
-title.
-
-**`vercel.json` — `framework: null`.** The repo root isn't a framework project;
-the build command and output directory point at the playground explicitly.
+- [0001](adr/0001-publish-flag-on-main.md) — the `validate` step ahead of the
+  deploy hook, and the rule that only the author sets `publish: true`.
+- [0002](adr/0002-three-vite-globs.md) — notes and media globs eager, sketch
+  glob lazy, and all three literal.
+- [0003](adr/0003-vite-fs-allow-repo-root.md) — `server.fs.allow: [repoRoot]`.
+- [0004](adr/0004-build-time-overlay-defines.md) — the `define` booleans, never
+  runtime env reads.
+- [0005](adr/0005-vercel-framework-null.md) — `framework: null` in `vercel.json`.
+- [0006](adr/0006-conductor-port-from-env.md) — `CONDUCTOR_PORT` in
+  `vite.config.ts`, and no `--port` in the Conductor script.
+- [0007](adr/0007-separate-tsconfigs.md) — three tsconfigs, and no `@types/node`
+  in the browser project.
+- [0008](adr/0008-new-entry-two-input-paths.md) — both the TTY prompts and the
+  flags in `new-entry.mjs`.
+- [0009](adr/0009-node-test-over-vitest.md) — `node:test`, no test dependency,
+  Node 24 in the workflows.
+- [0010](adr/0010-entry-module.md) — `entry.mjs` free of Node builtins, with all
+  schema knowledge in it and none in the adapters.
+- [0011](adr/0011-invalid-entries-render-with-problems.md) — no defaulting in the
+  data; the playground shows problems.
+- [0012](adr/0012-lowercase-media-extensions.md) — lowercase-only media
+  extensions, in agreement with the literal glob.
+- [0013](adr/0013-folder-name-equals-date-slug.md) — the folder-name check,
+  drafts included.

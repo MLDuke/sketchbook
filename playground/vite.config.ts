@@ -3,7 +3,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
 // The playground is its own Vite root (this folder), but it reads sketch source
-// and notes from ../entries and the shared frontmatter parser from ../scripts,
+// and notes from ../entries and the Entry module from ../scripts/lib,
 // so the dev server has to be allowed to serve files from the repo root.
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 

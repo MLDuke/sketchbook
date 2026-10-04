@@ -239,3 +239,8 @@ code {
   font-size: 11px;
   color: var(--muted);
 }
+
+.index__warn {
+  font-size: 11px;
+  color: #e7d38b;
+}
