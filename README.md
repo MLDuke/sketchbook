@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **This repository has moved.** It now lives in the [`MLDuke/portfolio-site`](https://github.com/MLDuke/portfolio-site) monorepo, under [`apps/sketchbook`](https://github.com/MLDuke/portfolio-site/tree/main/apps/sketchbook). This copy is archived and read-only. Its history was imported into the monorepo, and the `pre-monorepo` tag marks where it stopped.
+
 # sketchbook
 
 Raw lab notebook for design and code explorations — static images, GIFs, small UI code snippets. This repo is the source of truth for everything; [portfolio-site](https://github.com/MLDuke/portfolio-site)'s `/journal` section pulls in only the entries marked `publish: true`.
